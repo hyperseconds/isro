@@ -13,7 +13,7 @@ import threading
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-from matplotlib.backends.backend_tkagg import FigureCanvasTkinter
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import psycopg2
 from datetime import datetime, timedelta
 
@@ -115,7 +115,7 @@ class TitanusGUI:
         
         # Initialize matplotlib figure
         self.fig, self.axes = plt.subplots(2, 2, figsize=(12, 8))
-        self.canvas = FigureCanvasTkinter(self.fig, master=plot_frame)
+        self.canvas = FigureCanvasTkAgg(self.fig, master=plot_frame)
         self.canvas.get_tk_widget().grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
         
         plot_frame.columnconfigure(0, weight=1)
