@@ -148,16 +148,16 @@ class TitanusGUI:
         control_frame = ttk.LabelFrame(main_frame, text="Operations", padding="10")
         control_frame.grid(row=2, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=(0, 10))
         
+        ttk.Button(control_frame, text="Predict from JSON", 
+                  command=self.predict_from_json).grid(row=0, column=0, padx=5)
         ttk.Button(control_frame, text="Fuse + Predict", 
-                  command=self.fuse_and_predict).grid(row=0, column=0, padx=5)
+                  command=self.fuse_and_predict).grid(row=0, column=1, padx=5)
         ttk.Button(control_frame, text="Train Thresholds", 
-                  command=self.train_thresholds).grid(row=0, column=1, padx=5)
+                  command=self.train_thresholds).grid(row=0, column=2, padx=5)
         ttk.Button(control_frame, text="Log to DB", 
-                  command=self.log_to_database).grid(row=0, column=2, padx=5)
+                  command=self.log_to_database).grid(row=0, column=3, padx=5)
         ttk.Button(control_frame, text="Generate PDF", 
-                  command=self.generate_pdf_report).grid(row=0, column=3, padx=5)
-        ttk.Button(control_frame, text="Plot Live", 
-                  command=self.plot_live_data).grid(row=0, column=4, padx=5)
+                  command=self.generate_pdf_report).grid(row=0, column=4, padx=5)
         
         # Prediction Results Section
         results_frame = ttk.LabelFrame(main_frame, text="Prediction Results", padding="10")
@@ -181,6 +181,213 @@ class TitanusGUI:
         
         plot_frame.columnconfigure(0, weight=1)
         plot_frame.rowconfigure(0, weight=1)
+        
+    def load_sample_json(self):
+        """Load sample JSON data for testing"""
+        sample_data = {
+            "timestamp": "2025-07-15T15:00:00Z",
+            "features": {
+                "solar_wind_speed": 650.0,
+                "proton_density": 12.3,
+                "temperature": 45000.0,
+                "ion_flux": 2500000.0,
+                "electron_flux": 15000000.0,
+                "magnetic_field_x": 8.5,
+                "magnetic_field_y": -12.2,
+                "magnetic_field_z": 15.8,
+                "magnetic_field_magnitude": 21.4,
+                "dynamic_pressure": 8.2
+            }
+        }
+        
+        self.json_text.delete(1.0, tk.END)
+        self.json_text.insert(1.0, json.dumps(sample_data, indent=2))
+        self.update_results("Sample JSON data loaded (Strong CME scenario)")
+        
+    def load_from_json(self):
+        """Load data from JSON input"""
+        try:
+            json_content = self.json_text.get(1.0, tk.END).strip()
+            if not json_content:
+                messagebox.showwarning("Warning", "Please enter JSON data first")
+                return
+            
+            # Parse JSON
+            json_data = json.loads(json_content)
+            
+            # Validate required fields
+            if 'features' not in json_data:
+                messagebox.showerror("Error", "JSON must contain 'features' field")
+                return
+            
+            features = json_data['features']
+            required_fields = [
+                'solar_wind_speed', 'proton_density', 'temperature',
+                'ion_flux', 'electron_flux', 'magnetic_field_x',
+                'magnetic_field_y', 'magnetic_field_z', 'magnetic_field_magnitude',
+                'dynamic_pressure'
+            ]
+            
+            missing_fields = [field for field in required_fields if field not in features]
+            if missing_fields:
+                messagebox.showerror("Error", f"Missing required fields: {', '.join(missing_fields)}")
+                return
+            
+            # Create fused data from JSON
+            self.fused_data = {
+                'timestamp': json_data.get('timestamp', datetime.now().isoformat()),
+                'sources': ['json_input'],
+                'features': features,
+                'data_quality': {
+                    'overall_quality': 100.0,
+                    'json_input_quality': 100.0
+                }
+            }
+            
+            # Mark as loaded
+            self.status_labels['swis'].config(text="JSON Loaded", foreground="green")
+            self.status_labels['soleriox'].config(text="JSON Loaded", foreground="green")
+            self.status_labels['magnetometer'].config(text="JSON Loaded", foreground="green")
+            
+            self.update_results("JSON data loaded successfully")
+            self.update_results(f"Parameters: {list(features.keys())}")
+            
+        except json.JSONDecodeError as e:
+            messagebox.showerror("Error", f"Invalid JSON format: {str(e)}")
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to load JSON: {str(e)}")
+    
+    def clear_json(self):
+        """Clear JSON input area"""
+        self.json_text.delete(1.0, tk.END)
+        self.update_results("JSON input cleared")
+    
+    def predict_from_json(self):
+        """Predict CME using JSON input data"""
+        try:
+            # First load from JSON if not already loaded
+            if not self.fused_data:
+                self.load_from_json()
+                if not self.fused_data:
+                    return
+            
+            # Write fused data to JSON file for C engine
+            with open('fused/fused_input.json', 'w') as f:
+                json.dump(self.fused_data, f, indent=2)
+            
+            # Compile C program if needed
+            if not self.compile_c_program():
+                return
+            
+            # Run C prediction engine
+            self.update_results("Running C prediction engine...")
+            
+            result = subprocess.run(['./c_core/titanus_predictor'], 
+                                  capture_output=True, text=True, timeout=30)
+            
+            if result.returncode == 0:
+                self.update_results("C prediction engine completed successfully")
+                self.display_prediction_results()
+                
+                # Send alert if CME detected
+                if (self.prediction_results and 
+                    self.prediction_results.get('cme_detected', False)):
+                    self.send_cme_alert()
+                
+                # Plot the results
+                self.plot_json_data()
+                
+            else:
+                error_msg = f"C engine failed: {result.stderr}"
+                messagebox.showerror("Error", error_msg)
+                self.update_results(error_msg)
+                
+        except subprocess.TimeoutExpired:
+            messagebox.showerror("Error", "C prediction engine timed out")
+            self.update_results("C prediction engine timed out")
+        except Exception as e:
+            messagebox.showerror("Error", f"Prediction failed: {str(e)}")
+            self.update_results(f"Prediction error: {str(e)}")
+    
+    def plot_json_data(self):
+        """Plot data from JSON input"""
+        try:
+            if not self.fused_data or not self.prediction_results:
+                return
+                
+            # Clear previous plots
+            for ax in self.axes.flat:
+                ax.clear()
+            
+            features = self.fused_data['features']
+            future_pred = self.prediction_results.get('future_predictions', {})
+            
+            # Plot 1: Solar Wind Speed
+            ax1 = self.axes[0, 0]
+            current_speed = features['solar_wind_speed']
+            if 'solar_wind_speed' in future_pred:
+                future_hours = list(range(1, 25))
+                future_speeds = future_pred['solar_wind_speed']
+                
+                ax1.plot([0], [current_speed], 'ro', markersize=8, label='Current')
+                ax1.plot(future_hours, future_speeds, 'b-', label='24h Prediction')
+                ax1.axhline(y=600, color='r', linestyle='--', label='CME Threshold')
+                ax1.set_title('Solar Wind Speed')
+                ax1.set_xlabel('Hours from Now')
+                ax1.set_ylabel('Speed (km/s)')
+                ax1.legend()
+                ax1.grid(True)
+            
+            # Plot 2: Proton Density
+            ax2 = self.axes[0, 1]
+            current_density = features['proton_density']
+            if 'proton_density' in future_pred:
+                future_density = future_pred['proton_density']
+                
+                ax2.plot([0], [current_density], 'ro', markersize=8, label='Current')
+                ax2.plot(future_hours, future_density, 'g-', label='24h Prediction')
+                ax2.axhline(y=10, color='r', linestyle='--', label='CME Threshold')
+                ax2.set_title('Proton Density')
+                ax2.set_xlabel('Hours from Now')
+                ax2.set_ylabel('Density (cm⁻³)')
+                ax2.legend()
+                ax2.grid(True)
+            
+            # Plot 3: Magnetic Field
+            ax3 = self.axes[1, 0]
+            current_mag = features['magnetic_field_magnitude']
+            if 'magnetic_field_magnitude' in future_pred:
+                future_mag = future_pred['magnetic_field_magnitude']
+                
+                ax3.plot([0], [current_mag], 'ro', markersize=8, label='Current')
+                ax3.plot(future_hours, future_mag, 'm-', label='24h Prediction')
+                ax3.axhline(y=20, color='r', linestyle='--', label='CME Threshold')
+                ax3.set_title('Magnetic Field Magnitude')
+                ax3.set_xlabel('Hours from Now')
+                ax3.set_ylabel('Field (nT)')
+                ax3.legend()
+                ax3.grid(True)
+            
+            # Plot 4: Dynamic Pressure
+            ax4 = self.axes[1, 1]
+            current_pressure = features['dynamic_pressure']
+            if 'dynamic_pressure' in future_pred:
+                future_pressure = future_pred['dynamic_pressure']
+                
+                ax4.plot([0], [current_pressure], 'ro', markersize=8, label='Current')
+                ax4.plot(future_hours, future_pressure, 'c-', label='24h Prediction')
+                ax4.axhline(y=5, color='r', linestyle='--', label='CME Threshold')
+                ax4.set_title('Dynamic Pressure')
+                ax4.set_xlabel('Hours from Now')
+                ax4.set_ylabel('Pressure (nPa)')
+                ax4.legend()
+                ax4.grid(True)
+            
+            self.fig.tight_layout()
+            self.canvas.draw()
+            
+        except Exception as e:
+            self.update_results(f"Plotting error: {str(e)}")
         
     def load_data(self, source):
         """Load data from specified source"""
