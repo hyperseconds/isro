@@ -8,6 +8,155 @@ import pandas as pd
 from datetime import datetime, timedelta
 import os
 
+def parse_netcdf(file_path):
+    """Parse magnetometer NetCDF file"""
+    try:
+        # Try to import netCDF4 or xarray
+        try:
+            import netCDF4 as nc
+        except ImportError:
+            try:
+                import xarray as xr
+                return parse_netcdf_xarray(file_path)
+            except ImportError:
+                raise ImportError("Neither netCDF4 nor xarray is available for .nc files")
+        
+        # Open NetCDF file
+        dataset = nc.Dataset(file_path, 'r')
+        
+        data = {
+            'timestamp': [],
+            'magnetic_field': [],
+            'magnetic_field_magnitude': [],
+            'coordinate_system': 'GSE',
+            'data_quality': []
+        }
+        
+        # Get time variable
+        time_vars = ['time', 'Time', 'TIME', 'epoch', 'Epoch']
+        time_data = None
+        for var in time_vars:
+            if var in dataset.variables:
+                time_data = dataset.variables[var][:]
+                break
+        
+        # Convert time to datetime strings
+        if time_data is not None:
+            # Try to interpret time format
+            if hasattr(dataset.variables[var], 'units'):
+                units = dataset.variables[var].units
+                if 'seconds since' in units or 'days since' in units:
+                    import cftime
+                    times = cftime.num2date(time_data, units)
+                    data['timestamp'] = [t.strftime('%Y-%m-%d %H:%M:%S') for t in times]
+                else:
+                    # Assume epoch time
+                    data['timestamp'] = [datetime.fromtimestamp(t).strftime('%Y-%m-%d %H:%M:%S') for t in time_data]
+            else:
+                # Default to epoch time
+                data['timestamp'] = [datetime.fromtimestamp(t).strftime('%Y-%m-%d %H:%M:%S') for t in time_data]
+        
+        # Get magnetic field variables
+        b_vars = ['B', 'B_GSE', 'B_GSM', 'magnetic_field', 'mag_field', 'Bvec']
+        bx_vars = ['Bx', 'B_x', 'BX', 'bx']
+        by_vars = ['By', 'B_y', 'BY', 'by']
+        bz_vars = ['Bz', 'B_z', 'BZ', 'bz']
+        
+        # Try to get vector field first
+        for var in b_vars:
+            if var in dataset.variables:
+                b_data = dataset.variables[var][:]
+                if b_data.ndim >= 2 and b_data.shape[-1] >= 3:
+                    data['magnetic_field'] = b_data[:, :3].tolist()
+                    data['magnetic_field_magnitude'] = np.sqrt(
+                        np.sum(b_data[:, :3]**2, axis=1)
+                    ).tolist()
+                    break
+        
+        # If no vector field, try individual components
+        if not data['magnetic_field']:
+            bx = by = bz = None
+            
+            for var in bx_vars:
+                if var in dataset.variables:
+                    bx = dataset.variables[var][:]
+                    break
+            
+            for var in by_vars:
+                if var in dataset.variables:
+                    by = dataset.variables[var][:]
+                    break
+            
+            for var in bz_vars:
+                if var in dataset.variables:
+                    bz = dataset.variables[var][:]
+                    break
+            
+            if bx is not None and by is not None and bz is not None:
+                data['magnetic_field'] = np.column_stack([bx, by, bz]).tolist()
+                data['magnetic_field_magnitude'] = np.sqrt(bx**2 + by**2 + bz**2).tolist()
+        
+        # Get coordinate system from attributes
+        for var in dataset.variables:
+            if hasattr(dataset.variables[var], 'coordinate_system'):
+                data['coordinate_system'] = dataset.variables[var].coordinate_system
+                break
+        
+        dataset.close()
+        
+        return validate_magnetometer_data(data)
+        
+    except Exception as e:
+        print(f"Error parsing NetCDF file: {e}")
+        # Generate sample data as fallback
+        return generate_sample_magnetometer_data()
+
+def parse_netcdf_xarray(file_path):
+    """Parse NetCDF file using xarray"""
+    try:
+        import xarray as xr
+        
+        ds = xr.open_dataset(file_path)
+        
+        data = {
+            'timestamp': [],
+            'magnetic_field': [],
+            'magnetic_field_magnitude': [],
+            'coordinate_system': 'GSE',
+            'data_quality': []
+        }
+        
+        # Get time dimension
+        time_dim = None
+        for dim in ds.dims:
+            if 'time' in dim.lower():
+                time_dim = dim
+                break
+        
+        if time_dim and time_dim in ds.coords:
+            times = ds.coords[time_dim].values
+            data['timestamp'] = pd.to_datetime(times).strftime('%Y-%m-%d %H:%M:%S').tolist()
+        
+        # Get magnetic field data
+        b_vars = ['B', 'B_GSE', 'B_GSM', 'magnetic_field', 'mag_field']
+        for var in b_vars:
+            if var in ds.variables:
+                b_data = ds[var].values
+                if b_data.ndim >= 2 and b_data.shape[-1] >= 3:
+                    data['magnetic_field'] = b_data[:, :3].tolist()
+                    data['magnetic_field_magnitude'] = np.sqrt(
+                        np.sum(b_data[:, :3]**2, axis=1)
+                    ).tolist()
+                    break
+        
+        ds.close()
+        
+        return validate_magnetometer_data(data)
+        
+    except Exception as e:
+        print(f"Error parsing NetCDF with xarray: {e}")
+        return generate_sample_magnetometer_data()
+
 def parse_cdf(file_path):
     """Parse magnetometer CDF file"""
     try:

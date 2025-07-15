@@ -124,9 +124,17 @@ class TitanusGUI:
     def load_data(self, source):
         """Load data from specified source"""
         try:
+            # Define filetypes based on source
+            if source == 'magnetometer':
+                filetypes = [("CDF files", "*.cdf"), ("NetCDF files", "*.nc"), ("CSV files", "*.csv"), ("All files", "*.*")]
+            elif source == 'soleriox':
+                filetypes = [("CDF files", "*.cdf"), ("GTI files", "*.gti"), ("CSV files", "*.csv"), ("All files", "*.*")]
+            else:
+                filetypes = [("CDF files", "*.cdf"), ("CSV files", "*.csv"), ("All files", "*.*")]
+            
             file_path = filedialog.askopenfilename(
                 title=f"Select {source.upper()} data file",
-                filetypes=[("CDF files", "*.cdf"), ("CSV files", "*.csv"), ("All files", "*.*")]
+                filetypes=filetypes
             )
             
             if not file_path:
@@ -141,11 +149,15 @@ class TitanusGUI:
             elif source == 'soleriox':
                 if file_path.endswith('.cdf'):
                     self.data_sources[source] = soleriox_parser.parse_cdf(file_path)
+                elif file_path.endswith('.gti'):
+                    self.data_sources[source] = soleriox_parser.parse_gti(file_path)
                 else:
                     self.data_sources[source] = soleriox_parser.parse_csv(file_path)
             elif source == 'magnetometer':
                 if file_path.endswith('.cdf'):
                     self.data_sources[source] = magnetometer_parser.parse_cdf(file_path)
+                elif file_path.endswith('.nc'):
+                    self.data_sources[source] = magnetometer_parser.parse_netcdf(file_path)
                 else:
                     self.data_sources[source] = magnetometer_parser.parse_csv(file_path)
             
