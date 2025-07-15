@@ -45,7 +45,7 @@ int main() {
     printf("TITANUS CME Prediction Engine Starting...\n");
     
     // Read input JSON file
-    char* input_json_str = read_file("fused/fused_input.json");
+    char* input_json_str = read_file("../fused/fused_input.json");
     if (!input_json_str) {
         fprintf(stderr, "Error: Cannot read fused_input.json\n");
         return 1;
@@ -75,7 +75,7 @@ int main() {
     }
     
     // Write output file
-    if (write_file("fused/prediction_output.json", output_json_str) != 0) {
+    if (write_file("../fused/prediction_output.json", output_json_str) != 0) {
         fprintf(stderr, "Error: Cannot write prediction_output.json\n");
         free(output_json_str);
         cJSON_Delete(json);

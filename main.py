@@ -652,13 +652,21 @@ class TitanusGUI:
     def compile_c_program(self):
         """Compile the C prediction engine"""
         try:
+            self.update_results("🔧 Compiling C prediction engine...")
             result = subprocess.run(['make', '-C', 'c_core'], 
                                   capture_output=True, text=True)
             if result.returncode != 0:
-                raise Exception(f"Compilation failed: {result.stderr}")
-            self.update_results("C program compiled successfully")
+                error_msg = f"Compilation failed: {result.stderr}"
+                self.update_results(f"❌ {error_msg}")
+                messagebox.showerror("Compilation Error", error_msg)
+                return False
+            self.update_results("✅ C program compiled successfully")
+            return True
         except Exception as e:
-            raise Exception(f"Failed to compile C program: {str(e)}")
+            error_msg = f"Failed to compile C program: {str(e)}"
+            self.update_results(f"❌ {error_msg}")
+            messagebox.showerror("Compilation Error", error_msg)
+            return False
     
     def display_prediction_results(self):
         """Display prediction results in the GUI"""
