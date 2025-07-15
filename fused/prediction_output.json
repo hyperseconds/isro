@@ -1,64 +1,28 @@
 {
-  "timestamp": "2025-07-15T10:30:15Z",
-  "cme_detected": true,
-  "confidence": 0.847,
-  "prediction_method": "C_THRESHOLD_ENGINE",
-  "features": {
-    "solar_wind_speed": 650.5,
-    "proton_density": 12.3,
-    "temperature": 75000.0,
-    "ion_flux": 2500000.0,
-    "electron_flux": 15000000.0,
-    "magnetic_field_magnitude": 21.4,
-    "dynamic_pressure": 8.2
-  },
-  "future_predictions": {
-    "solar_wind_speed": [640, 635, 630, 625, 620, 615, 610, 605, 600, 595, 590, 585, 580, 575, 570, 565, 560, 555, 550, 545, 540, 535, 530, 525],
-    "proton_density": [12.0, 11.5, 11.0, 10.5, 10.0, 9.5, 9.0, 8.5, 8.0, 7.5, 7.0, 6.8, 6.6, 6.4, 6.2, 6.0, 5.8, 5.6, 5.4, 5.2, 5.0, 4.8, 4.6, 4.4],
-    "magnetic_field_magnitude": [20.5, 20.0, 19.5, 19.0, 18.5, 18.0, 17.5, 17.0, 16.5, 16.0, 15.5, 15.0, 14.5, 14.0, 13.5, 13.0, 12.5, 12.0, 11.5, 11.0, 10.5, 10.0, 9.5, 9.0],
-    "dynamic_pressure": [8.0, 7.8, 7.6, 7.4, 7.2, 7.0, 6.8, 6.6, 6.4, 6.2, 6.0, 5.8, 5.6, 5.4, 5.2, 5.0, 4.8, 4.6, 4.4, 4.2, 4.0, 3.8, 3.6, 3.4]
-  },
-  "thresholds_used": {
-    "SOLAR_WIND_THRESHOLD": 600.0,
-    "PROTON_DENSITY_THRESHOLD": 10.0,
-    "TEMPERATURE_THRESHOLD": 50000.0,
-    "DYNAMIC_PRESSURE_THRESHOLD": 5.0,
-    "ION_FLUX_THRESHOLD": 1000000.0,
-    "ELECTRON_FLUX_THRESHOLD": 10000000.0,
-    "MAGNETIC_ROTATION_THRESHOLD": 30.0,
-    "MAGNETIC_FIELD_THRESHOLD": 20.0,
-    "MIN_DETECTION_FLAGS": 3
-  },
-  "detection_analysis": {
-    "triggered_thresholds": [
-      "SOLAR_WIND_THRESHOLD",
-      "PROTON_DENSITY_THRESHOLD",
-      "DYNAMIC_PRESSURE_THRESHOLD",
-      "ION_FLUX_THRESHOLD",
-      "ELECTRON_FLUX_THRESHOLD",
-      "MAGNETIC_FIELD_THRESHOLD"
-    ],
-    "detection_flags": 6,
-    "required_flags": 3,
-    "confidence_factors": {
-      "speed_enhancement": 1.08,
-      "density_enhancement": 1.23,
-      "pressure_enhancement": 1.64,
-      "flux_enhancement": 2.5,
-      "magnetic_enhancement": 1.07
-    }
-  },
-  "geomagnetic_forecast": {
-    "impact_level": "MODERATE",
-    "kp_estimate": 6.2,
-    "storm_probability": 78.5,
-    "arrival_time_estimate": "2025-07-16T22:30:00Z",
-    "duration_estimate": "12-18 hours"
-  },
-  "processing_info": {
-    "processing_time_ms": 847,
-    "algorithm_version": "TITANUS_v1.0",
-    "data_sources_used": ["swis", "soleriox", "magnetometer"],
-    "quality_score": 95.3
-  }
+	"cme_detected":	true,
+	"confidence":	0.65733333333333333,
+	"prediction_method":	"C_THRESHOLD_ENGINE",
+	"timestamp":	"2025-07-15T20:07:59",
+	"features":	{
+		"solar_wind_speed":	750,
+		"proton_density":	15.5,
+		"temperature":	45000,
+		"ion_flux":	3500000,
+		"electron_flux":	25000000,
+		"magnetic_field_magnitude":	32.1,
+		"dynamic_pressure":	12.8
+	},
+	"future_predictions":	{
+		"solar_wind_speed":	[746.875, 743.75, 740.625, 737.5, 734.375, 731.25, 728.125, 725, 721.875, 718.75, 715.625, 712.5, 709.375, 706.25, 703.125, 700, 696.875, 693.75, 690.625, 687.5, 684.375, 681.25, 678.125, 675],
+		"proton_density":	[15.90463119588216, 16.302339039817813, 16.686318640331777, 17.05, 17.387160429927032, 17.6920310216783, 17.959395354902828, 18.184678751731759, 18.364026550784988, 18.49437006149611, 18.573479070258813, 18.6, 18.573479070258813, 18.49437006149611, 18.364026550784988, 18.184678751731759, 17.959395354902828, 17.6920310216783, 17.387160429927032, 17.05, 16.686318640331777, 16.302339039817813, 15.90463119588216, 15.5],
+		"magnetic_field_magnitude":	[36.750932853581865, 36.269912319222072, 35.504719151413227, 34.5075, 33.34621370216864, 32.1, 30.853786297831363, 29.6925, 28.695280848586776, 27.93008768077793, 27.449067146418137, 27.285, 27.449067146418137, 27.93008768077793, 28.695280848586776, 29.6925, 30.853786297831363, 32.1, 33.34621370216864, 34.5075, 35.504719151413227, 36.269912319222072, 36.750932853581865, 36.915],
+		"dynamic_pressure":	[12.773333333333333, 12.746666666666668, 12.72, 12.693333333333335, 12.666666666666668, 12.64, 12.613333333333335, 12.586666666666666, 12.56, 12.533333333333333, 12.506666666666668, 12.48, 12.453333333333333, 12.426666666666668, 12.4, 12.373333333333335, 12.346666666666668, 12.32, 12.293333333333335, 12.266666666666667, 12.24, 12.213333333333333, 12.186666666666667, 12.16]
+	},
+	"thresholds_used":	{
+		"SOLAR_WIND_THRESHOLD":	600,
+		"PROTON_DENSITY_THRESHOLD":	10,
+		"DYNAMIC_PRESSURE_THRESHOLD":	5,
+		"ION_FLUX_THRESHOLD":	1000000,
+		"MIN_DETECTION_FLAGS":	3
+	}
 }
