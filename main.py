@@ -227,22 +227,50 @@ class TitanusGUI:
                 
                 # Extract features based on source type
                 if source == 'swis':
-                    fused['features']['solar_wind_speed'] = float(np.mean(data.get('speed', [400])))
-                    fused['features']['proton_density'] = float(np.mean(data.get('density', [5])))
-                    fused['features']['temperature'] = float(np.mean(data.get('temperature', [100000])))
+                    speed_data = data.get('speed', [400])
+                    density_data = data.get('density', [5])
+                    temp_data = data.get('temperature', [100000])
+                    
+                    # Handle both single values and lists
+                    fused['features']['solar_wind_speed'] = float(np.mean(speed_data) if isinstance(speed_data, list) else speed_data)
+                    fused['features']['proton_density'] = float(np.mean(density_data) if isinstance(density_data, list) else density_data)
+                    fused['features']['temperature'] = float(np.mean(temp_data) if isinstance(temp_data, list) else temp_data)
                     
                 elif source == 'soleriox':
-                    fused['features']['ion_flux'] = float(np.mean(data.get('ion_flux', [1e5])))
-                    fused['features']['electron_flux'] = float(np.mean(data.get('electron_flux', [1e6])))
+                    ion_flux_data = data.get('ion_flux', [1e5])
+                    electron_flux_data = data.get('electron_flux', [1e6])
+                    
+                    # Handle both single values and lists
+                    fused['features']['ion_flux'] = float(np.mean(ion_flux_data) if isinstance(ion_flux_data, list) else ion_flux_data)
+                    fused['features']['electron_flux'] = float(np.mean(electron_flux_data) if isinstance(electron_flux_data, list) else electron_flux_data)
                     
                 elif source == 'magnetometer':
-                    mag_data = data.get('magnetic_field', [10, 5, -8])
-                    if len(mag_data) >= 3:
-                        fused['features']['magnetic_field_x'] = float(mag_data[0])
-                        fused['features']['magnetic_field_y'] = float(mag_data[1])
-                        fused['features']['magnetic_field_z'] = float(mag_data[2])
-                        fused['features']['magnetic_field_magnitude'] = float(np.sqrt(
-                            mag_data[0]**2 + mag_data[1]**2 + mag_data[2]**2))
+                    mag_data = data.get('magnetic_field', [[10, 5, -8]])
+                    mag_magnitude = data.get('magnetic_field_magnitude', [12.2])
+                    
+                    # Handle nested lists for magnetic field
+                    if isinstance(mag_data, list) and len(mag_data) > 0:
+                        if isinstance(mag_data[0], list):
+                            # It's a list of vectors, take the mean of each component
+                            mag_array = np.array(mag_data)
+                            if mag_array.shape[1] >= 3:
+                                fused['features']['magnetic_field_x'] = float(np.mean(mag_array[:, 0]))
+                                fused['features']['magnetic_field_y'] = float(np.mean(mag_array[:, 1]))
+                                fused['features']['magnetic_field_z'] = float(np.mean(mag_array[:, 2]))
+                                fused['features']['magnetic_field_magnitude'] = float(np.mean(np.sqrt(
+                                    mag_array[:, 0]**2 + mag_array[:, 1]**2 + mag_array[:, 2]**2)))
+                        else:
+                            # It's a single vector
+                            if len(mag_data) >= 3:
+                                fused['features']['magnetic_field_x'] = float(mag_data[0])
+                                fused['features']['magnetic_field_y'] = float(mag_data[1])
+                                fused['features']['magnetic_field_z'] = float(mag_data[2])
+                                fused['features']['magnetic_field_magnitude'] = float(np.sqrt(
+                                    mag_data[0]**2 + mag_data[1]**2 + mag_data[2]**2))
+                    
+                    # Use provided magnitude if available
+                    if mag_magnitude and isinstance(mag_magnitude, list):
+                        fused['features']['magnetic_field_magnitude'] = float(np.mean(mag_magnitude))
         
         # Add derived features
         if 'solar_wind_speed' in fused['features']:
@@ -432,11 +460,16 @@ Key Parameters:
         data = self.data_sources['swis']
         ax = self.axes[0, 0]
         
+        # Get speed data and handle different formats
+        speed_data = data.get('speed', [400])
+        if not isinstance(speed_data, list):
+            speed_data = [speed_data]
+        
         # Create time series
         times = pd.date_range(start=datetime.now() - timedelta(hours=24), 
-                             periods=len(data.get('speed', [400])), freq='H')
+                             periods=len(speed_data), freq='H')
         
-        ax.plot(times, data.get('speed', [400]), label='Solar Wind Speed', color='blue')
+        ax.plot(times, speed_data, label='Solar Wind Speed', color='blue')
         ax.set_title('SWIS: Solar Wind Speed')
         ax.set_ylabel('Speed (km/s)')
         ax.legend()
@@ -447,10 +480,18 @@ Key Parameters:
         data = self.data_sources['soleriox']
         ax = self.axes[0, 1]
         
-        times = pd.date_range(start=datetime.now() - timedelta(hours=24), 
-                             periods=len(data.get('ion_flux', [1e5])), freq='H')
+        # Get ion flux data and handle different formats
+        ion_flux_data = data.get('ion_flux', [1e5])
+        if not isinstance(ion_flux_data, list):
+            ion_flux_data = [ion_flux_data]
         
-        ax.semilogy(times, data.get('ion_flux', [1e5]), label='Ion Flux', color='red')
+        # Ensure positive values for log plot
+        ion_flux_data = [max(val, 1e3) for val in ion_flux_data]
+        
+        times = pd.date_range(start=datetime.now() - timedelta(hours=24), 
+                             periods=len(ion_flux_data), freq='H')
+        
+        ax.semilogy(times, ion_flux_data, label='Ion Flux', color='red')
         ax.set_title('SOLERIOX: Particle Flux')
         ax.set_ylabel('Flux (particles/cm²/s)')
         ax.legend()
@@ -461,14 +502,30 @@ Key Parameters:
         data = self.data_sources['magnetometer']
         ax = self.axes[1, 0]
         
-        mag_field = data.get('magnetic_field', [10, 5, -8])
-        times = pd.date_range(start=datetime.now() - timedelta(hours=24), 
-                             periods=len(mag_field), freq='H')
+        mag_field = data.get('magnetic_field', [[10, 5, -8]])
+        mag_magnitude = data.get('magnetic_field_magnitude', [12.2])
         
-        if len(mag_field) >= 3:
-            magnitude = [np.sqrt(x**2 + y**2 + z**2) for x, y, z in 
-                        zip([mag_field[0]], [mag_field[1]], [mag_field[2]])]
-            ax.plot(times[:len(magnitude)], magnitude, label='|B| Magnitude', color='green')
+        # Handle different data structures
+        if isinstance(mag_field, list) and len(mag_field) > 0:
+            # If we have pre-calculated magnitude, use it
+            if mag_magnitude and isinstance(mag_magnitude, list):
+                magnitude = mag_magnitude
+            else:
+                # Calculate magnitude from components
+                if isinstance(mag_field[0], list):
+                    # List of vectors
+                    magnitude = [np.sqrt(vec[0]**2 + vec[1]**2 + vec[2]**2) for vec in mag_field if len(vec) >= 3]
+                else:
+                    # Single vector
+                    if len(mag_field) >= 3:
+                        magnitude = [np.sqrt(mag_field[0]**2 + mag_field[1]**2 + mag_field[2]**2)]
+                    else:
+                        magnitude = [10.0]  # Default value
+            
+            times = pd.date_range(start=datetime.now() - timedelta(hours=24), 
+                                 periods=len(magnitude), freq='H')
+            
+            ax.plot(times, magnitude, label='|B| Magnitude', color='green')
         
         ax.set_title('Magnetometer: Magnetic Field')
         ax.set_ylabel('Field Strength (nT)')

@@ -2,9 +2,14 @@
  * Feature Extraction Functions for TITANUS CME Detection
  */
 
+#define _USE_MATH_DEFINES
 #include <math.h>
 #include <stdio.h>
 #include "feature_extractor.h"
+
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
 
 double extract_gradient(double* values, int count, double time_interval) {
     if (count < 2) return 0.0;
