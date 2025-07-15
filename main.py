@@ -69,19 +69,80 @@ class TitanusGUI:
         data_frame = ttk.LabelFrame(main_frame, text="Data Sources", padding="10")
         data_frame.grid(row=1, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=(0, 10))
         
-        ttk.Button(data_frame, text="Load SWIS Data", 
+        # File loading buttons
+        file_frame = ttk.Frame(data_frame)
+        file_frame.grid(row=0, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=(0, 10))
+        
+        ttk.Button(file_frame, text="Load SWIS Data", 
                   command=lambda: self.load_data('swis')).grid(row=0, column=0, padx=5)
-        ttk.Button(data_frame, text="Load SOLERIOX Data", 
+        ttk.Button(file_frame, text="Load SOLERIOX Data", 
                   command=lambda: self.load_data('soleriox')).grid(row=0, column=1, padx=5)
-        ttk.Button(data_frame, text="Load Magnetometer Data", 
+        ttk.Button(file_frame, text="Load Magnetometer Data", 
                   command=lambda: self.load_data('magnetometer')).grid(row=0, column=2, padx=5)
         
         # Status indicators
         self.status_labels = {}
         for i, source in enumerate(['swis', 'soleriox', 'magnetometer']):
-            self.status_labels[source] = ttk.Label(data_frame, text="Not Loaded", 
+            self.status_labels[source] = ttk.Label(file_frame, text="Not Loaded", 
                                                   foreground="red")
             self.status_labels[source].grid(row=1, column=i, padx=5)
+        
+        # JSON Input Section
+        json_frame = ttk.LabelFrame(data_frame, text="JSON Data Input", padding="10")
+        json_frame.grid(row=2, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=(10, 0))
+        data_frame.rowconfigure(2, weight=1)
+        
+        # JSON input area
+        json_input_frame = ttk.Frame(json_frame)
+        json_input_frame.grid(row=0, column=0, columnspan=3, sticky=(tk.W, tk.E, tk.N, tk.S), pady=(0, 10))
+        json_frame.rowconfigure(0, weight=1)
+        json_frame.columnconfigure(0, weight=1)
+        
+        ttk.Label(json_input_frame, text="Enter JSON data with space weather parameters:").grid(row=0, column=0, sticky=tk.W)
+        
+        self.json_text = tk.Text(json_input_frame, height=8, width=80)
+        json_scrollbar = ttk.Scrollbar(json_input_frame, orient="vertical", command=self.json_text.yview)
+        self.json_text.configure(yscrollcommand=json_scrollbar.set)
+        
+        self.json_text.grid(row=1, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
+        json_scrollbar.grid(row=1, column=1, sticky=(tk.N, tk.S))
+        
+        json_input_frame.columnconfigure(0, weight=1)
+        json_input_frame.rowconfigure(1, weight=1)
+        
+        # JSON control buttons
+        json_control_frame = ttk.Frame(json_frame)
+        json_control_frame.grid(row=1, column=0, columnspan=3, sticky=(tk.W, tk.E))
+        
+        ttk.Button(json_control_frame, text="Load Sample Data", 
+                  command=self.load_sample_json).grid(row=0, column=0, padx=5)
+        ttk.Button(json_control_frame, text="Load from JSON", 
+                  command=self.load_from_json).grid(row=0, column=1, padx=5)
+        ttk.Button(json_control_frame, text="Clear JSON", 
+                  command=self.clear_json).grid(row=0, column=2, padx=5)
+        
+        # Parameter explanation
+        param_frame = ttk.LabelFrame(json_frame, text="Required Parameters", padding="5")
+        param_frame.grid(row=2, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=(10, 0))
+        
+        param_text = """Required JSON format:
+{
+  "features": {
+    "solar_wind_speed": 650.0,        // km/s (normal: 400, CME: >600)
+    "proton_density": 12.3,           // cm⁻³ (normal: 5, CME: >10)
+    "temperature": 75000.0,           // K (normal: 100000, CME: <50000)
+    "ion_flux": 2500000.0,            // particles/cm²/s (CME: >1e6)
+    "electron_flux": 15000000.0,      // particles/cm²/s (CME: >1e7)
+    "magnetic_field_x": 8.5,          // nT
+    "magnetic_field_y": -12.2,        // nT
+    "magnetic_field_z": 15.8,         // nT
+    "magnetic_field_magnitude": 21.4, // nT (CME: >20)
+    "dynamic_pressure": 8.2           // nPa (normal: 2, CME: >5)
+  }
+}"""
+        
+        param_label = ttk.Label(param_frame, text=param_text, font=('Courier', 9))
+        param_label.grid(row=0, column=0, sticky=tk.W)
         
         # Control Buttons Section
         control_frame = ttk.LabelFrame(main_frame, text="Operations", padding="10")
