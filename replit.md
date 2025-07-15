@@ -8,6 +8,14 @@ TITANUS (Temporal Integration of Terrestrial Activity and Near-Universe Surveill
 
 Preferred communication style: Simple, everyday language.
 
+## Recent Changes
+
+**2025-07-15**: Fixed C compilation issue
+- Resolved linker errors with object files by fixing Makefile indentation
+- Updated file paths in C code to work correctly with directory structure
+- System now uses JSON-only interface (no file uploads) per user requirements
+- All three example scenarios (Strong CME, Moderate CME, Quiet Conditions) working correctly
+
 ## System Architecture
 
 ### Hybrid Python + C Architecture

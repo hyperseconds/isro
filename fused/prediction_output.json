@@ -2,7 +2,7 @@
 	"cme_detected":	true,
 	"confidence":	0.65733333333333333,
 	"prediction_method":	"C_THRESHOLD_ENGINE",
-	"timestamp":	"2025-07-15T20:19:04",
+	"timestamp":	"2025-07-15T20:23:10",
 	"features":	{
 		"solar_wind_speed":	750,
 		"proton_density":	15.5,

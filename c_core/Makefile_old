@@ -41,6 +41,27 @@ clean:
 distclean: clean
 	rm -f cJSON.c cJSON.h
 
+# Install dependencies (for systems with package managers)
+deps:
+	@echo "Installing dependencies..."
+	@if command -v apt-get > /dev/null; then \
+		sudo apt-get update && sudo apt-get install -y build-essential curl; \
+	elif command -v yum > /dev/null; then \
+		sudo yum install -y gcc make curl; \
+	elif command -v brew > /dev/null; then \
+		brew install gcc make curl; \
+	else \
+		echo "Please install gcc, make, and curl manually"; \
+	fi
+
+# Debug build
+debug: CFLAGS += -DDEBUG -g3
+debug: $(TARGET)
+
+# Release build
+release: CFLAGS += -DNDEBUG -O3
+release: $(TARGET)
+
 # Test compilation
 test: $(TARGET)
 	@echo "Testing compilation..."
@@ -52,4 +73,18 @@ test: $(TARGET)
 		exit 1; \
 	fi
 
-.PHONY: all clean distclean test cjson
+# Help target
+help:
+	@echo "TITANUS CME Prediction Engine Makefile"
+	@echo ""
+	@echo "Targets:"
+	@echo "  all      - Build the prediction engine (default)"
+	@echo "  clean    - Remove build artifacts"
+	@echo "  distclean- Remove all generated files"
+	@echo "  deps     - Install system dependencies"
+	@echo "  debug    - Build with debug symbols"
+	@echo "  release  - Build optimized release version"
+	@echo "  test     - Test compilation"
+	@echo "  help     - Show this help message"
+
+.PHONY: all clean distclean deps debug release test help cjson
