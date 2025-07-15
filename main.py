@@ -65,32 +65,25 @@ class TitanusGUI:
                                font=('Arial', 16, 'bold'))
         title_label.grid(row=0, column=0, columnspan=3, pady=(0, 20))
         
-        # Data Loading Section
-        data_frame = ttk.LabelFrame(main_frame, text="Data Sources", padding="10")
+        # Data Input Section
+        data_frame = ttk.LabelFrame(main_frame, text="Data Input", padding="10")
         data_frame.grid(row=1, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=(0, 10))
         
-        # File loading buttons
-        file_frame = ttk.Frame(data_frame)
-        file_frame.grid(row=0, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=(0, 10))
+        # CACTUS CSV Upload (for training comparison)
+        cactus_frame = ttk.Frame(data_frame)
+        cactus_frame.grid(row=0, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=(0, 10))
         
-        ttk.Button(file_frame, text="Load SWIS Data", 
-                  command=lambda: self.load_data('swis')).grid(row=0, column=0, padx=5)
-        ttk.Button(file_frame, text="Load SOLERIOX Data", 
-                  command=lambda: self.load_data('soleriox')).grid(row=0, column=1, padx=5)
-        ttk.Button(file_frame, text="Load Magnetometer Data", 
-                  command=lambda: self.load_data('magnetometer')).grid(row=0, column=2, padx=5)
+        ttk.Label(cactus_frame, text="CACTUS CME Catalog (CSV):").grid(row=0, column=0, sticky=tk.W, padx=5)
+        ttk.Button(cactus_frame, text="Upload CACTUS CSV", 
+                  command=self.load_cactus_csv).grid(row=0, column=1, padx=5)
         
-        # Status indicators
-        self.status_labels = {}
-        for i, source in enumerate(['swis', 'soleriox', 'magnetometer']):
-            self.status_labels[source] = ttk.Label(file_frame, text="Not Loaded", 
-                                                  foreground="red")
-            self.status_labels[source].grid(row=1, column=i, padx=5)
+        self.cactus_status = ttk.Label(cactus_frame, text="Not Loaded", foreground="red")
+        self.cactus_status.grid(row=0, column=2, padx=5)
         
         # JSON Input Section
-        json_frame = ttk.LabelFrame(data_frame, text="JSON Data Input", padding="10")
-        json_frame.grid(row=2, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=(10, 0))
-        data_frame.rowconfigure(2, weight=1)
+        json_frame = ttk.LabelFrame(data_frame, text="Space Weather Data (JSON Input)", padding="10")
+        json_frame.grid(row=1, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=(10, 0))
+        data_frame.rowconfigure(1, weight=1)
         
         # JSON input area
         json_input_frame = ttk.Frame(json_frame)
@@ -98,9 +91,9 @@ class TitanusGUI:
         json_frame.rowconfigure(0, weight=1)
         json_frame.columnconfigure(0, weight=1)
         
-        ttk.Label(json_input_frame, text="Enter JSON data with space weather parameters:").grid(row=0, column=0, sticky=tk.W)
+        ttk.Label(json_input_frame, text="Enter space weather parameters (JSON format):").grid(row=0, column=0, sticky=tk.W)
         
-        self.json_text = tk.Text(json_input_frame, height=8, width=80)
+        self.json_text = tk.Text(json_input_frame, height=12, width=80)
         json_scrollbar = ttk.Scrollbar(json_input_frame, orient="vertical", command=self.json_text.yview)
         self.json_text.configure(yscrollcommand=json_scrollbar.set)
         
@@ -114,50 +107,31 @@ class TitanusGUI:
         json_control_frame = ttk.Frame(json_frame)
         json_control_frame.grid(row=1, column=0, columnspan=3, sticky=(tk.W, tk.E))
         
-        ttk.Button(json_control_frame, text="Load Sample Data", 
-                  command=self.load_sample_json).grid(row=0, column=0, padx=5)
-        ttk.Button(json_control_frame, text="Load from JSON", 
-                  command=self.load_from_json).grid(row=0, column=1, padx=5)
+        ttk.Button(json_control_frame, text="Strong CME Example", 
+                  command=lambda: self.load_sample_json('strong_cme')).grid(row=0, column=0, padx=5)
+        ttk.Button(json_control_frame, text="Moderate CME Example", 
+                  command=lambda: self.load_sample_json('moderate_cme')).grid(row=0, column=1, padx=5)
+        ttk.Button(json_control_frame, text="Quiet Conditions", 
+                  command=lambda: self.load_sample_json('quiet')).grid(row=0, column=2, padx=5)
         ttk.Button(json_control_frame, text="Clear JSON", 
-                  command=self.clear_json).grid(row=0, column=2, padx=5)
+                  command=self.clear_json).grid(row=0, column=3, padx=5)
         
-        # Parameter explanation
-        param_frame = ttk.LabelFrame(json_frame, text="Required Parameters", padding="5")
-        param_frame.grid(row=2, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=(10, 0))
-        
-        param_text = """Required JSON format:
-{
-  "features": {
-    "solar_wind_speed": 650.0,        // km/s (normal: 400, CME: >600)
-    "proton_density": 12.3,           // cm⁻³ (normal: 5, CME: >10)
-    "temperature": 75000.0,           // K (normal: 100000, CME: <50000)
-    "ion_flux": 2500000.0,            // particles/cm²/s (CME: >1e6)
-    "electron_flux": 15000000.0,      // particles/cm²/s (CME: >1e7)
-    "magnetic_field_x": 8.5,          // nT
-    "magnetic_field_y": -12.2,        // nT
-    "magnetic_field_z": 15.8,         // nT
-    "magnetic_field_magnitude": 21.4, // nT (CME: >20)
-    "dynamic_pressure": 8.2           // nPa (normal: 2, CME: >5)
-  }
-}"""
-        
-        param_label = ttk.Label(param_frame, text=param_text, font=('Courier', 9))
-        param_label.grid(row=0, column=0, sticky=tk.W)
+        # Status indicator
+        self.json_status = ttk.Label(json_control_frame, text="No Data", foreground="red")
+        self.json_status.grid(row=0, column=4, padx=10)
         
         # Control Buttons Section
         control_frame = ttk.LabelFrame(main_frame, text="Operations", padding="10")
         control_frame.grid(row=2, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=(0, 10))
         
-        ttk.Button(control_frame, text="Predict from JSON", 
+        ttk.Button(control_frame, text="🚀 Predict CME", 
                   command=self.predict_from_json).grid(row=0, column=0, padx=5)
-        ttk.Button(control_frame, text="Fuse + Predict", 
-                  command=self.fuse_and_predict).grid(row=0, column=1, padx=5)
-        ttk.Button(control_frame, text="Train Thresholds", 
-                  command=self.train_thresholds).grid(row=0, column=2, padx=5)
-        ttk.Button(control_frame, text="Log to DB", 
-                  command=self.log_to_database).grid(row=0, column=3, padx=5)
-        ttk.Button(control_frame, text="Generate PDF", 
-                  command=self.generate_pdf_report).grid(row=0, column=4, padx=5)
+        ttk.Button(control_frame, text="🎯 Train Thresholds", 
+                  command=self.train_thresholds).grid(row=0, column=1, padx=5)
+        ttk.Button(control_frame, text="💾 Log to DB", 
+                  command=self.log_to_database).grid(row=0, column=2, padx=5)
+        ttk.Button(control_frame, text="📄 Generate PDF", 
+                  command=self.generate_pdf_report).grid(row=0, column=3, padx=5)
         
         # Prediction Results Section
         results_frame = ttk.LabelFrame(main_frame, text="Prediction Results", padding="10")
@@ -182,27 +156,144 @@ class TitanusGUI:
         plot_frame.columnconfigure(0, weight=1)
         plot_frame.rowconfigure(0, weight=1)
         
-    def load_sample_json(self):
-        """Load sample JSON data for testing"""
-        sample_data = {
-            "timestamp": "2025-07-15T15:00:00Z",
+    def load_sample_json(self, scenario='strong_cme'):
+        """Load sample JSON data for testing different scenarios"""
+        
+        scenarios = {
+            'strong_cme': {
+                "timestamp": "2025-07-15T15:00:00Z",
+                "scenario": "Strong CME Event",
+                "description": "Multiple thresholds triggered - high probability CME",
+                "swis_data": {
+                    "solar_wind_speed": 750.0,     # > 600 threshold
+                    "proton_density": 15.5,        # > 10 threshold  
+                    "temperature": 45000.0         # < 50000 threshold (depression)
+                },
+                "soleriox_data": {
+                    "ion_flux": 3500000.0,         # > 1e6 threshold
+                    "electron_flux": 25000000.0    # > 1e7 threshold
+                },
+                "magnetometer_data": {
+                    "magnetic_field_x": 12.8,
+                    "magnetic_field_y": -18.5,
+                    "magnetic_field_z": 22.3,
+                    "magnetic_field_magnitude": 32.1  # > 20 threshold
+                },
+                "derived_parameters": {
+                    "dynamic_pressure": 12.8       # > 5 threshold
+                }
+            },
+            'moderate_cme': {
+                "timestamp": "2025-07-15T16:00:00Z",
+                "scenario": "Moderate CME Event",
+                "description": "Some thresholds triggered - possible CME",
+                "swis_data": {
+                    "solar_wind_speed": 620.0,     # Just above threshold
+                    "proton_density": 11.2,        # Slightly above threshold
+                    "temperature": 52000.0         # Normal temperature
+                },
+                "soleriox_data": {
+                    "ion_flux": 1200000.0,         # Above threshold
+                    "electron_flux": 8500000.0     # Below electron threshold
+                },
+                "magnetometer_data": {
+                    "magnetic_field_x": 8.2,
+                    "magnetic_field_y": -10.1,
+                    "magnetic_field_z": 12.7,
+                    "magnetic_field_magnitude": 18.5  # Below magnetic threshold
+                },
+                "derived_parameters": {
+                    "dynamic_pressure": 6.1        # Above pressure threshold
+                }
+            },
+            'quiet': {
+                "timestamp": "2025-07-15T17:00:00Z",
+                "scenario": "Quiet Space Weather",
+                "description": "Normal conditions - no CME expected",
+                "swis_data": {
+                    "solar_wind_speed": 420.0,     # Below threshold
+                    "proton_density": 5.8,         # Below threshold
+                    "temperature": 65000.0         # Normal temperature
+                },
+                "soleriox_data": {
+                    "ion_flux": 450000.0,          # Below threshold
+                    "electron_flux": 3200000.0     # Below threshold
+                },
+                "magnetometer_data": {
+                    "magnetic_field_x": 5.2,
+                    "magnetic_field_y": -3.8,
+                    "magnetic_field_z": 7.1,
+                    "magnetic_field_magnitude": 12.3  # Below threshold
+                },
+                "derived_parameters": {
+                    "dynamic_pressure": 2.8        # Below threshold
+                }
+            }
+        }
+        
+        if scenario not in scenarios:
+            scenario = 'strong_cme'
+        
+        data = scenarios[scenario]
+        
+        # Flatten the data into the required format
+        flattened_data = {
+            "timestamp": data["timestamp"],
+            "scenario": data["scenario"],
+            "description": data["description"],
             "features": {
-                "solar_wind_speed": 650.0,
-                "proton_density": 12.3,
-                "temperature": 45000.0,
-                "ion_flux": 2500000.0,
-                "electron_flux": 15000000.0,
-                "magnetic_field_x": 8.5,
-                "magnetic_field_y": -12.2,
-                "magnetic_field_z": 15.8,
-                "magnetic_field_magnitude": 21.4,
-                "dynamic_pressure": 8.2
+                "solar_wind_speed": data["swis_data"]["solar_wind_speed"],
+                "proton_density": data["swis_data"]["proton_density"],
+                "temperature": data["swis_data"]["temperature"],
+                "ion_flux": data["soleriox_data"]["ion_flux"],
+                "electron_flux": data["soleriox_data"]["electron_flux"],
+                "magnetic_field_x": data["magnetometer_data"]["magnetic_field_x"],
+                "magnetic_field_y": data["magnetometer_data"]["magnetic_field_y"],
+                "magnetic_field_z": data["magnetometer_data"]["magnetic_field_z"],
+                "magnetic_field_magnitude": data["magnetometer_data"]["magnetic_field_magnitude"],
+                "dynamic_pressure": data["derived_parameters"]["dynamic_pressure"]
+            },
+            "thresholds_info": {
+                "solar_wind_speed": "CME if > 600 km/s",
+                "proton_density": "CME if > 10 cm⁻³",
+                "temperature": "CME if < 50000 K (depression)",
+                "ion_flux": "CME if > 1e6 particles/cm²/s",
+                "electron_flux": "CME if > 1e7 particles/cm²/s",
+                "magnetic_field_magnitude": "CME if > 20 nT",
+                "dynamic_pressure": "CME if > 5 nPa"
             }
         }
         
         self.json_text.delete(1.0, tk.END)
-        self.json_text.insert(1.0, json.dumps(sample_data, indent=2))
-        self.update_results("Sample JSON data loaded (Strong CME scenario)")
+        self.json_text.insert(1.0, json.dumps(flattened_data, indent=2))
+        self.json_status.config(text=f"Loaded: {data['scenario']}", foreground="green")
+        self.update_results(f"Sample JSON data loaded: {data['scenario']}")
+        self.update_results(f"Description: {data['description']}")
+        
+    def load_cactus_csv(self):
+        """Load CACTUS CME catalog CSV for training/comparison"""
+        try:
+            file_path = filedialog.askopenfilename(
+                title="Select CACTUS CME Catalog CSV",
+                filetypes=[("CSV files", "*.csv"), ("All files", "*.*")]
+            )
+            
+            if not file_path:
+                return
+            
+            # Copy to data directory
+            import shutil
+            target_path = "data/CACTUS_events.csv"
+            shutil.copy2(file_path, target_path)
+            
+            # Load and validate
+            df = pd.read_csv(target_path)
+            self.cactus_status.config(text=f"Loaded ({len(df)} events)", foreground="green")
+            self.update_results(f"CACTUS catalog loaded: {len(df)} CME events")
+            
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to load CACTUS CSV: {str(e)}")
+            self.update_results(f"CACTUS loading error: {str(e)}")
         
     def load_from_json(self):
         """Load data from JSON input"""
@@ -210,7 +301,7 @@ class TitanusGUI:
             json_content = self.json_text.get(1.0, tk.END).strip()
             if not json_content:
                 messagebox.showwarning("Warning", "Please enter JSON data first")
-                return
+                return False
             
             # Parse JSON
             json_data = json.loads(json_content)
@@ -218,7 +309,7 @@ class TitanusGUI:
             # Validate required fields
             if 'features' not in json_data:
                 messagebox.showerror("Error", "JSON must contain 'features' field")
-                return
+                return False
             
             features = json_data['features']
             required_fields = [
@@ -231,7 +322,7 @@ class TitanusGUI:
             missing_fields = [field for field in required_fields if field not in features]
             if missing_fields:
                 messagebox.showerror("Error", f"Missing required fields: {', '.join(missing_fields)}")
-                return
+                return False
             
             # Create fused data from JSON
             self.fused_data = {
@@ -244,22 +335,29 @@ class TitanusGUI:
                 }
             }
             
-            # Mark as loaded
-            self.status_labels['swis'].config(text="JSON Loaded", foreground="green")
-            self.status_labels['soleriox'].config(text="JSON Loaded", foreground="green")
-            self.status_labels['magnetometer'].config(text="JSON Loaded", foreground="green")
+            # Update status
+            self.json_status.config(text="Data Loaded", foreground="green")
             
-            self.update_results("JSON data loaded successfully")
-            self.update_results(f"Parameters: {list(features.keys())}")
+            scenario = json_data.get('scenario', 'Custom Data')
+            self.update_results(f"JSON data loaded successfully: {scenario}")
+            
+            if 'description' in json_data:
+                self.update_results(f"Description: {json_data['description']}")
+            
+            return True
             
         except json.JSONDecodeError as e:
             messagebox.showerror("Error", f"Invalid JSON format: {str(e)}")
+            return False
         except Exception as e:
             messagebox.showerror("Error", f"Failed to load JSON: {str(e)}")
+            return False
     
     def clear_json(self):
         """Clear JSON input area"""
         self.json_text.delete(1.0, tk.END)
+        self.json_status.config(text="No Data", foreground="red")
+        self.fused_data = None
         self.update_results("JSON input cleared")
     
     def predict_from_json(self):
@@ -267,8 +365,7 @@ class TitanusGUI:
         try:
             # First load from JSON if not already loaded
             if not self.fused_data:
-                self.load_from_json()
-                if not self.fused_data:
+                if not self.load_from_json():
                     return
             
             # Write fused data to JSON file for C engine
@@ -280,13 +377,13 @@ class TitanusGUI:
                 return
             
             # Run C prediction engine
-            self.update_results("Running C prediction engine...")
+            self.update_results("🚀 Running C prediction engine...")
             
             result = subprocess.run(['./c_core/titanus_predictor'], 
                                   capture_output=True, text=True, timeout=30)
             
             if result.returncode == 0:
-                self.update_results("C prediction engine completed successfully")
+                self.update_results("✅ C prediction engine completed successfully")
                 self.display_prediction_results()
                 
                 # Send alert if CME detected
@@ -298,16 +395,16 @@ class TitanusGUI:
                 self.plot_json_data()
                 
             else:
-                error_msg = f"C engine failed: {result.stderr}"
+                error_msg = f"❌ C engine failed: {result.stderr}"
                 messagebox.showerror("Error", error_msg)
                 self.update_results(error_msg)
                 
         except subprocess.TimeoutExpired:
             messagebox.showerror("Error", "C prediction engine timed out")
-            self.update_results("C prediction engine timed out")
+            self.update_results("⏱️ C prediction engine timed out")
         except Exception as e:
             messagebox.showerror("Error", f"Prediction failed: {str(e)}")
-            self.update_results(f"Prediction error: {str(e)}")
+            self.update_results(f"❌ Prediction error: {str(e)}")
     
     def plot_json_data(self):
         """Plot data from JSON input"""
