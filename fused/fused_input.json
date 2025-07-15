@@ -1,7 +1,8 @@
 {
   "timestamp": "2025-07-15T15:00:00Z",
-  "scenario": "Strong CME Event",
-  "description": "Multiple thresholds triggered - high probability CME",
+  "sources": [
+    "json_input"
+  ],
   "features": {
     "solar_wind_speed": 750.0,
     "proton_density": 15.5,
@@ -13,5 +14,9 @@
     "magnetic_field_z": 22.3,
     "magnetic_field_magnitude": 32.1,
     "dynamic_pressure": 12.8
+  },
+  "data_quality": {
+    "overall_quality": 100.0,
+    "json_input_quality": 100.0
   }
 }
